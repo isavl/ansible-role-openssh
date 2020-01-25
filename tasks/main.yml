@@ -1,0 +1,160 @@
+---
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+- name: "Initialize distribution-specific variables"
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "dist-{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+    - "dist-{{ ansible_distribution }}.yml"
+    - "dist-{{ ansible_os_family }}.yml"
+    - "dist-Default.yml"
+
+- name: "Install packages"
+  package:
+    name: "{{ openssh_packages }}"
+    state: "present"
+  when: "openssh_packages is defined and openssh_packages is not none"
+
+# - name: "Setup system group"
+#   group:
+#     gid: "{{ openssh_group_id if openssh_group_id is not none else omit }}"
+#     name: "{{ openssh_group_name }}"
+#     system: "{{ 'no' if openssh_group_id is not none else 'yes' }}"
+#   when: "openssh_group_managed | bool"
+
+# - name: "Setup system user"
+#   user:
+#     create_home: "no"
+#     group: "{{ openssh_group_name }}"
+#     groups: "{{ openssh_user_groups }}"
+#     home: "{{ openssh_data_dir if openssh_data_dir is not none else omit }}"
+#     name: "{{ openssh_user_name }}"
+#     shell: "/sbin/nologin"
+#     system: "{{ 'no' if openssh_user_id is not none else 'yes' }}"
+#     uid: "{{ openssh_user_id if openssh_user_id is not none else omit }}"
+#   when: "openssh_user_managed | bool"
+
+- name: "Setup directory for config files"
+  file:
+    state: "directory"
+    dest: "{{ openssh_config_dir }}"
+    owner: "root"
+    group: "root"
+    mode: "0750"
+  when: "openssh_config_dir != '/etc'"
+
+- name: "Setup directory for certificate and key files"
+  file:
+    state: "directory"
+    dest: "{{ openssh_pki_dir }}"
+    owner: "root"
+    group: "root"
+    mode: "0750"
+
+# - name: "Setup directory for pid and socket files"
+#   file:
+#     state: "directory"
+#     dest: "{{ openssh_run_dir }}"
+#     owner: "{{ openssh_user_name }}"
+#     group: "{{ openssh_group_name }}"
+#     mode: "0750"
+#   when: "openssh_run_dir != '/run'"
+
+- name: "Setup directory for log files"
+  file:
+    state: "directory"
+    dest: "{{ openssh_log_dir }}"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  when: "openssh_log_dir != '/var/log'"
+
+# - name: "Setup directory for data files"
+#   file:
+#     state: "directory"
+#     dest: "{{ openssh_data_dir }}"
+#     owner: "{{ openssh_user_name }}"
+#     group: "{{ openssh_group_name }}"
+#     mode: "0750"
+
+- name: "Setup config files"
+  template:
+    src: "{{ item['src'] }}"
+    dest: "{{ openssh_config_dir }}/{{ item['name'] if item['name'] is defined else (item['src'] | basename | regex_replace('.j2', '')) }}"
+    owner: "root"
+    group: "root"
+    mode: "0640"
+  with_items: "{{ openssh_config_files }}"
+  when: "openssh_config_files is defined and openssh_config_files is not none"
+  notify: "restart_openssh_services"
+
+- name: "Copy certificate and key files"
+  copy:
+    src: "{{ item['src'] }}"
+    dest: "{{ openssh_pki_dir }}/{{ item['name'] if item['name'] is defined else (item['src'] | basename) }}"
+    owner: "root"
+    group: "root"
+    mode: "0640"
+  with_items: "{{ openssh_pki_files }}"
+  notify: "restart_openssh_services"
+
+# - name: "Setup tmpfiles.d config files"
+#   template:
+#     src: "{{ item['src'] }}"
+#     dest: "{{ tmpfiles_d_config_dir if tmpfiles_d_config_dir is defined else '/etc/tmpfiles.d' }}/{{ item['name'] if item['name'] is defined else (item['src'] | basename | regex_replace('.j2', '') | regex_replace('.tmpfile', '.conf')) }}"
+#     owner: "root"
+#     group: "root"
+#     mode: "0644"
+#   with_items: "{{ openssh_tmpfiles_d_files }}"
+#   when: "openssh_tmpfiles_d_files is defined and openssh_tmpfiles_d_files is not none"
+
+- name: "Setup systemd service files"
+  template:
+    src: "{{ item['src'] }}"
+    dest: "{{ systemd_config_dir if systemd_config_dir is defined else '/etc/systemd' }}/system/{{ item['name'] if item['name'] is defined else (item['src'] | basename | regex_replace('.j2', '')) }}"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  with_items: "{{ openssh_systemd_service_files }}"
+  when:
+    - "openssh_systemd_managed | bool"
+    - "openssh_systemd_service_files is defined and openssh_systemd_service_files is not none"
+    - "ansible_service_mgr == 'systemd'"
+  notify: "restart_openssh_services"
+
+# - name: "Setup systemd timer files"
+#   template:
+#     src: "{{ item['src'] }}"
+#     dest: "{{ systemd_config_dir if systemd_config_dir is defined else '/etc/systemd' }}/system/{{ item['name'] if item['name'] is defined else (item['src'] | basename | regex_replace('.j2', '')) }}"
+#     owner: "root"
+#     group: "root"
+#     mode: "0644"
+#   with_items: "{{ openssh_systemd_timer_files }}"
+#   when:
+#     - "openssh_systemd_managed | bool"
+#     - "openssh_systemd_timer_files is defined and openssh_systemd_timer_files is not none"
+#     - "ansible_service_mgr == 'systemd'"
+
+- name: "Check status of systemd services"
+  systemd:
+    daemon_reload: "yes"
+    enabled: "{{ 'yes' if item['enabled'] is defined and item['enabled'] else omit }}"
+    name: "{{ item['name'] if item['name'] is defined else (item['src'] | basename | regex_replace('.j2', '')) }}"
+    state: "{{ 'started' if item['started'] is defined and item['started'] else omit }}"
+  with_items: "{{ openssh_systemd_service_files }}"
+  when:
+    - "openssh_systemd_managed | bool"
+    - "openssh_systemd_service_files is defined and openssh_systemd_service_files is not none"
+    - "ansible_service_mgr == 'systemd'"
+
+# - name: "Check status of systemd timers"
+#   systemd:
+#     daemon_reload: "yes"
+#     enabled: "{{ 'yes' if item['enabled'] is defined and item['enabled'] else omit }}"
+#     name: "{{ item['name'] if item['name'] is defined else (item['src'] | basename | regex_replace('.j2', '')) }}"
+#     state: "{{ 'started' if item['started'] is defined and item['started'] else omit }}"
+#   with_items: "{{ openssh_systemd_timer_files }}"
+#   when:
+#     - "openssh_systemd_managed | bool"
+#     - "openssh_systemd_timer_files is defined and openssh_systemd_timer_files is not none"
+#     - "ansible_service_mgr == 'systemd'"

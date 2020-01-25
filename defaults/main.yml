@@ -1,0 +1,86 @@
+---
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Manage or not system user/group.
+# openssh_user_managed: true
+# openssh_group_managed: true
+
+# System user/group name.
+# openssh_user_name: "openssh"
+# openssh_group_name: "openssh"
+
+# System user/group id.
+# openssh_user_id: ~
+# openssh_group_id: ~
+
+# List of system user additional groups.
+# openssh_user_groups: []
+
+# Directory for config files.
+openssh_config_dir: "/etc/ssh"
+
+# Directory for certificate and key files.
+openssh_pki_dir: "/etc/pki/openssh"
+
+# Directory for processes pid and socket files.
+# openssh_run_dir: "/run/openssh"
+
+# Directory for log files.
+openssh_log_dir: "/var/log/openssh"
+
+# Directory for data files.
+# openssh_data_dir: "/var/lib/openssh"
+
+# List of config file templates.
+#
+# Format:
+#   - name - name of file on target system (if not defined used src name)
+#     src  - path to config file template
+openssh_config_files:
+
+  - src: "ssh_config.j2"
+  - src: "sshd_config.j2"
+
+# List of certificate and key files.
+#
+# Format:
+#   - name - name of file on target system (if not defined used src name)
+#     src  - path to certificate or key file
+openssh_pki_files: []
+
+# Manage or not systemd services.
+openssh_systemd_managed: true
+
+# Systemd service files.
+#
+# Format:
+#   - name - name of file on target system (if not defined used src name)
+#     src  - path to template file
+#     enabled - enable service on boot (disabled by default)
+#     started - starting service after setup (disabled by default)
+#     react - if true this service react on changes in config files (disabled by default)
+openssh_systemd_service_files:
+
+  - src: "sshd.service.j2"
+    enabled: true
+    started: true
+    react: true
+
+  - src: "sshd-keygen@.service.j2"
+  - src: "sshd-keygen.target.j2"
+
+# Systemd timer files.
+#
+# Format:
+#   - name - name of file on target system (if not defined used src name)
+#     src  - path to template file
+#     enabled - enable service on boot (disabled by default)
+#     started - starting service after setup (disabled by default)
+# openssh_systemd_timer_files: []
+
+# List of tmpfiles.d config file templates.
+#
+# Format:
+#   - name - name of file on target system (if not defined used src name)
+#     src  - path to template file
+# openssh_tmpfiles_d_files: []

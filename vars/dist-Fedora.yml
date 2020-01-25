@@ -1,0 +1,14 @@
+---
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Packages required to be installed.
+openssh_packages:
+
+  - "openssh"
+  - "openssh-clients"
+  - "openssh-server"
+
+openssh_ssh_bin: "/usr/bin/ssh"
+openssh_ssh_keygen_bin: "/usr/bin/ssh-keygen"
+openssh_sshd_bin: "/usr/sbin/sshd"
+openssh_sshd_keygen_bin: "/usr/libexec/openssh/sshd-keygen"

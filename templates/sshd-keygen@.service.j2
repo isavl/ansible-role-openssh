@@ -1,0 +1,15 @@
+[Unit]
+
+Description=OpenSSH %i server key generation
+
+ConditionFileNotEmpty=|!{{ openssh_config_dir }}/ssh_host_%i_key
+
+[Service]
+
+ExecStart={{ openssh_sshd_keygen_bin }} %i
+
+Type=oneshot
+
+[Install]
+
+WantedBy=sshd-keygen.target

@@ -1,0 +1,27 @@
+[Unit]
+
+Description=OpenSSH server
+
+Documentation=man:sshd(8)
+Documentation=man:sshd_config(5)
+
+After=network.target
+After=sshd-keygen.target
+
+Wants=sshd-keygen.target
+
+[Service]
+
+ExecStart={{ openssh_sshd_bin }} -D
+ExecReload=/bin/kill -HUP $MAINPID
+
+Type=notify
+
+KillMode=process
+
+Restart=on-failure
+RestartSec=20s
+
+[Install]
+
+WantedBy=multi-user.target

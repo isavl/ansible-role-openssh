@@ -1,0 +1,142 @@
+###############################################################################
+# /etc/ssh/sshd_config
+#
+# This is the sshd server system-wide configuration file.
+# See sshd_config(5) for more information.
+#
+# This sshd was compiled with PATH=/usr/bin:/bin:/usr/sbin:/sbin
+#
+# The strategy used for options in the default sshd_config shipped with
+# OpenSSH is to specify options with their default value where
+# possible, but leave them commented.  Uncommented options override the
+# default value.
+###############################################################################
+
+###############################################################################
+# General
+###############################################################################
+
+#PidFile /run/sshd.pid
+
+AddressFamily {{ openssh_sshd_config_AddressFamily | default('any') }}
+
+#ListenAddress
+
+Port {{ openssh_sshd_config_Port | default('22') }}
+
+Protocol 2
+
+Compression delayed
+
+AcceptEnv LANG LANGUAGE LC_*
+
+Subsystem sftp internal-sftp
+
+LogLevel VERBOSE
+
+PrintMotd yes
+PrintLastLog yes
+
+TCPKeepAlive yes
+
+UseDNS no
+
+#X11Forwarding yes
+#X11DisplayOffset 10
+#X11UseLocalhost yes
+
+###############################################################################
+# Authentication
+###############################################################################
+
+PermitRootLogin without-password
+
+StrictModes yes
+
+LoginGraceTime 2m
+
+MaxAuthTries 12
+
+MaxSessions 256
+
+IgnoreUserKnownHosts yes
+IgnoreRhosts yes
+
+###############################################################################
+# Authentication - password
+###############################################################################
+
+ChallengeResponseAuthentication no
+
+PasswordAuthentication yes
+
+PermitEmptyPasswords no
+
+UsePAM yes
+
+###############################################################################
+# Authentication - key
+###############################################################################
+
+PubkeyAuthentication yes
+
+AuthorizedKeysFile .ssh/authorized_keys
+
+###############################################################################
+# Kerberos options
+###############################################################################
+
+#KerberosAuthentication no
+#KerberosOrLocalPasswd yes
+#KerberosTicketCleanup yes
+#KerberosGetAFSToken no
+
+###############################################################################
+# GSSAPI options
+###############################################################################
+
+#GSSAPIAuthentication no
+#GSSAPICleanupCredentials yes
+#GSSAPIStrictAcceptorCheck yes
+
+###############################################################################
+# Hosts
+###############################################################################
+
+###############################################################################
+# Groups
+###############################################################################
+
+{% if openssh_sshd_config_groups is defined
+  and openssh_sshd_config_groups is not none %}
+{% for group in openssh_sshd_config_groups %}
+Match group {{ group['name'] }}
+    ChrootDirectory {{ group['chroot_directory'] }}
+    ForceCommand {{ group['force_command'] | default('internal-sftp -l VERBOSE') }}
+{% if group['extra_options'] is defined %}
+    {{ group['extra_options'] | indent(4) }}
+{% endif %}
+{% if not loop['last'] %}
+
+{% endif %}
+{% endfor %}
+{% endif %}
+
+###############################################################################
+# Users
+###############################################################################
+
+{% if openssh_sshd_config_users is defined
+  and openssh_sshd_config_users is not none %}
+{% for user in openssh_sshd_config_users %}
+Match user {{ user['name'] }}
+    ChrootDirectory {{ user['chroot_directory'] }}
+    ForceCommand {{ user['force_command'] | default('internal-sftp -l VERBOSE') }}
+{% if user['extra_options'] is defined %}
+    {{ user['extra_options'] | indent(4) }}
+{% endif %}
+{% if not loop['last'] %}
+
+{% endif %}
+{% endfor %}
+{% endif %}

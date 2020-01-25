@@ -1,0 +1,15 @@
+---
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+- name: "Restart systemd services"
+  systemd:
+    daemon_reload: "yes"
+    name: "{{ item['name'] if item['name'] is defined else (item['src'] | basename | regex_replace('.j2', '')) }}"
+    state: "restarted"
+  listen: "restart_openssh_services"
+  with_items: "{{ openssh_systemd_service_files }}"
+  when:
+    - "openssh_systemd_managed | bool"
+    - "openssh_systemd_service_files is defined and openssh_systemd_service_files is not none"
+    - "item['react'] is defined and item['react'] | bool"
+    - "ansible_service_mgr == 'systemd'"
